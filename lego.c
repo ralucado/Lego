@@ -6,7 +6,7 @@
  * With AHPCRC, University of Minnesota
  * ANTLR Version 1.33MR33
  *
- *   /opt/pccts/bin/antlr -gt lego.g
+ *   antlr -gt lego.g
  *
  */
 
