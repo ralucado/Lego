@@ -2,6 +2,7 @@
 <<
 #include <string>
 #include <iostream>
+#include <vector>
 #include <map>
 using namespace std;
 
@@ -10,6 +11,8 @@ typedef struct {
   string kind;
   string text;
 } Attrib;
+
+
 
 // function to fill token information (predeclaration)
 void zzcr_attr(Attrib *attr, int type, char *text);
@@ -46,9 +49,9 @@ void zzcr_attr(Attrib *attr, int type, char *text) {
 // function to create a new AST node
 AST* createASTnode(Attrib* attr, int type, char* text) {
   AST* as = new AST;
-  as->kind = attr->kind; 
+  as->kind = attr->kind;
   as->text = attr->text;
-  as->right = NULL; 
+  as->right = NULL;
   as->down = NULL;
   return as;
 }
@@ -88,7 +91,7 @@ void ASTPrintIndent(AST *a,string s)
     ASTPrintIndent(i,s+"  |"+string(i->kind.size()+i->text.size(),' '));
     i=i->right;
   }
-  
+
   if (i!=NULL) {
       cout<<s+"  \\__";
       ASTPrintIndent(i,s+"   "+string(i->kind.size()+i->text.size(),' '));
@@ -96,7 +99,35 @@ void ASTPrintIndent(AST *a,string s)
   }
 }
 
-/// print AST 
+///structs per el programa
+typedef struct {
+    int x, y; // punt superior esquerra
+    int h, w; // dimensions
+} tblock;
+
+typedef struct {
+    int n, m;
+    vector< vector <int> > height;
+    map <string, tblock> blocks;
+} Graella;
+
+
+Graella g;
+
+///execute INSTR
+void executeInstructions(AST *a){
+    if(a != NULL){
+        if(child(a, 0) != NULL) createGrid(child(a, 0));
+        else{
+            cerr << "THE PROGRAM MUST BEGIN BY A GRID DECLARATION" << endl;
+            exit(1);
+        }
+        if(child(a, 2) != NULL) defineFunctions(child(a, 2));
+        if(child(a, 1) != NULL) doOperations(child(a, 1));
+    }
+}
+
+/// print AST
 void ASTPrint(AST *a)
 {
   while (a!=NULL) {
@@ -112,6 +143,7 @@ int main() {
   root = NULL;
   ANTLR(lego(&root), stdin);
   ASTPrint(root);
+  executeInstructions(root);
 }
 >>
 
@@ -145,25 +177,28 @@ int main() {
 #token ID "[a-zA-Z][a-zA-Z0-9]+"
 #token END "ENDEF"
 //...
-#token SPACE "[\ \n]" << zzskip();>>
+#token SPACE "[reop\ \n\b]" << zzskip();>>
 
 lego: grid ops defs <<#0=createASTlist(_sibling);>>;
 //...
-grid: GRID^ NUM NUM;
-
 ops: (fact | moviment | bucle | height)* <<#0=createASTlist(_sibling);>>;
 
+bucle: WHILE^ LP! cond RP! LB! ops RB!;
+///bucle: WHILE^ LP cond RP LB ops RB;
+
+grid: GRID^ NUM NUM;
+
 fact: ID ASIG^ (place | pp);
-
 place: PLACE^ comp AT! comp;
-
 pp: (comp | ID ) ((PUSH^ | POP^) pp | );
+
 
 moviment: MOVE^ ID dir NUM;
 
-bucle: WHILE^ LP! cond RP! LB! ops RB!;
+cond: (fits | comparacio) (AND^ cond| );
+////cond: (fits | (atom reop atom)) (AND^ cosa)*;
 
-cond: (fits | (atom reop atom)) (AND^ cond| );
+comparacio: atom (LT^ | GT^) atom;
 
 atom: height | NUM;
 
@@ -173,8 +208,15 @@ height: HEIGHT^ LP! ID RP!;
 
 fits: FITS^ LP! ID COMA! comp COMA! NUM RP!;
 
-defs: ;
+defs: (def)*<<#0=createASTlist(_sibling);>>;
+
+def: DEF^ ID ops END!;
 
 dir: NORTH | EAST | WEST | SOUTH;
 
 reop: LT^ | GT^;
+
+////fact: ID ((ASIG^ (asig)) | );
+/////asig: asigop | place;
+////asigop: (ID | comp) (PUSH^ | POP^) asigopre;
+////asigopre: (ID | comp) (((PUSH^ | POP^) asigopre) | );

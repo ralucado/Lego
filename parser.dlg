@@ -15,6 +15,7 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
 #include <map>
 using namespace std;
 
@@ -23,6 +24,8 @@ typedef struct {
   string kind;
   string text;
 } Attrib;
+
+
 
 // function to fill token information (predeclaration)
 void zzcr_attr(Attrib *attr, int type, char *text);
@@ -191,7 +194,7 @@ ENDEF
 		NLA = END;
 	>>
 
-[\ \n]
+[reop\ \n\b]
 	<<
 		NLA = SPACE;
     zzskip();  

@@ -44,15 +44,21 @@ extern void lego();
 #endif
 
 #ifdef __USE_PROTOS
-void grid(AST**_root);
-#else
-extern void grid();
-#endif
-
-#ifdef __USE_PROTOS
 void ops(AST**_root);
 #else
 extern void ops();
+#endif
+
+#ifdef __USE_PROTOS
+void bucle(AST**_root);
+#else
+extern void bucle();
+#endif
+
+#ifdef __USE_PROTOS
+void grid(AST**_root);
+#else
+extern void grid();
 #endif
 
 #ifdef __USE_PROTOS
@@ -80,15 +86,15 @@ extern void moviment();
 #endif
 
 #ifdef __USE_PROTOS
-void bucle(AST**_root);
-#else
-extern void bucle();
-#endif
-
-#ifdef __USE_PROTOS
 void cond(AST**_root);
 #else
 extern void cond();
+#endif
+
+#ifdef __USE_PROTOS
+void comparacio(AST**_root);
+#else
+extern void comparacio();
 #endif
 
 #ifdef __USE_PROTOS
@@ -122,6 +128,12 @@ extern void defs();
 #endif
 
 #ifdef __USE_PROTOS
+void def(AST**_root);
+#else
+extern void def();
+#endif
+
+#ifdef __USE_PROTOS
 void dir(AST**_root);
 #else
 extern void dir();
@@ -135,8 +147,8 @@ extern void reop();
 
 #endif
 extern SetWordType zzerr1[];
-extern SetWordType zzerr2[];
 extern SetWordType setwd1[];
+extern SetWordType zzerr2[];
 extern SetWordType zzerr3[];
 extern SetWordType zzerr4[];
 extern SetWordType zzerr5[];
@@ -147,4 +159,6 @@ extern SetWordType setwd2[];
 extern SetWordType zzerr9[];
 extern SetWordType zzerr10[];
 extern SetWordType zzerr11[];
+extern SetWordType zzerr12[];
 extern SetWordType setwd3[];
+extern SetWordType setwd4[];
