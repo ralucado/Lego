@@ -68,14 +68,14 @@ AST *root;
 
 // function to fill token information
 void zzcr_attr(Attrib *attr, int type, char *text) {
-  /*  if (type == ID) {
+  /* if (type == ID) {
     attr->kind = "id";
     attr->text = text;
   }
   else {*/
     attr->kind = text;
     attr->text = "";
-    //  }
+    //}
 }
 
 // function to create a new AST node
@@ -143,17 +143,148 @@ typedef struct {
   map <string, tblock> blocks;
 } Graella;
 
+//predeclaracio de coses
+void doOperations(AST *a);
+int retHeight(AST* a);
 
 Graella g;
+
+//aqui posem el punter a la definicio de cada funcio
+//del programa per tal de executarla quan faci falta
+map <string, AST*> functions;
+
+void createGrid(AST *a){
+  g.n = atoi(child(a, 0)->kind.c_str());
+  g.m = atoi(child(a, 1)->kind.c_str());
+  g.height = vector< vector<int> >(g.m, vector<int>(g.n, 0));
+}
+
+void defineFunctions(AST *a){
+  int i = 0;
+  AST *actual = child(a, i);
+  while(actual != NULL){
+    
+        functions.insert(pair<string, AST*>( child(actual,0)->kind, child(actual,1)));
+    ++i;
+    actual = child(a,i);
+  }
+  map<string,AST*>::iterator it;
+  for (it = functions.begin(); it != functions.end(); ++it){
+    cout << it->first << "->" << it->second->kind << endl;
+  }
+  
+}
+
+
+int contCond = 0;
+bool fits(AST* a){
+  ++contCond;
+  bool b = contCond != 2;
+  cout << "Does " << a->kind << "\'s son fit? " << b << endl;
+  return b;
+}
+
+int ievaluaCond(AST* a){
+  if(a->kind == "AND"){
+    return ievaluaCond(child(a,0)) && ievaluaCond(child(a,1));
+  }
+  else if (a->kind == "<"){
+    return ievaluaCond(child(a,0)) < ievaluaCond(child(a,1));
+  }
+  else if (a->kind == ">"){
+    return ievaluaCond(child(a,0)) > ievaluaCond(child(a,1));
+  }
+  else if (a->kind == "HEIGHT") return retHeight(a);
+  else return atoi(a->kind.c_str());
+}
+
+bool evaluaCond(AST* a){
+  cout << "avere com faig aixo sense morirme" << endl;
+  if(a->kind == "AND"){
+    return bool(ievaluaCond(child(a,0))) && bool(ievaluaCond(child(a,1)));
+  }
+  else if (a->kind == "FITS") return fits(child(a,0));
+  else if (a->kind == "<"){
+    return ievaluaCond(child(a,0)) < ievaluaCond(child(a,1));
+  }
+  else if (a->kind == ">"){
+    return ievaluaCond(child(a,0)) > ievaluaCond(child(a,1));
+  }
+  else{
+    cerr << "LA CONDICIO HA DE CONTENIR ALMENYS UN OPERADOR BINARI" << endl;
+    exit(1);
+  }
+}
+
+void asignacio(AST* a){
+  cout << "el token asig es de " << a->kind << endl;
+}
+
+void move(AST* a){
+  cout << "el token move es de " << a->kind << endl;
+}
+
+void bucle(AST* a){
+  //contCond = 0;
+  cout << "el token bakel es de " << a->kind << endl;
+  while (evaluaCond(child(a,0))){
+    doOperations(child(a,1));
+  }
+}
+
+int h1 = 1, h2 = 2;
+bool count = false;
+int retHeight(AST* a){
+  cout << "volem saber la alçada de " << child(a,0)->kind <</* " i count es "<< count << */endl;
+  /*
+  count = !count;
+  if (count) return h1;
+  return h2;*/
+  return 0;
+}
+
+void execFunc(AST* a){
+  cout << "el token execfunc es de " << a->kind << endl;
+  map <string, AST*>::iterator it;
+  it = functions.find(a->kind);
+  if(it != functions.end()) doOperations(functions[a->kind]);
+  else{
+    cerr << "THE FUNCTION " << a->kind << " IS NOT DEFINED" << endl;
+    exit(1);
+  }
+}
+
+
+
+void doOperations(AST *a){
+  //asig
+  //move
+  //while
+  //height
+  //def
+  int i = 0;
+  AST* actual = child(a,i);
+  while(actual != NULL){
+    if (actual->kind == "=") asignacio(actual);
+    else if (actual->kind == "MOVE") move(actual);
+    else if (actual->kind == "WHILE") bucle(actual);
+    else if (actual->kind == "HEIGHT") cout << retHeight(actual) << endl;
+    else execFunc(actual);
+    ++i;
+    actual = child(a,i);
+  }
+}
 
 ///execute INSTR
 void executeInstructions(AST *a){
   if(a != NULL){
-    int i = 0;
-    while (child(a,i) != NULL){
-      cout << child(a,i)->kind << endl;
-      ++i;
+    if(child(a, 0) != NULL) createGrid(child(a, 0));
+    else{
+      cerr << "THE PROGRAM MUST BEGIN BY A GRID DECLARATION" << endl;
+      exit(1);
     }
+    if(child(a, 2) != NULL) defineFunctions(child(a, 2));
+    if(child(a, 1) != NULL) doOperations(child(a, 1));
   }
 }
 
@@ -166,8 +297,6 @@ void ASTPrint(AST *a)
     a=a->right;
   }
 }
-
-
 
 int main() {
   root = NULL;
@@ -318,19 +447,40 @@ AST **_root;
   zzMake0;
   {
   zzmatch(ID); zzsubchild(_root, &_sibling, &_tail); zzCONSUME;
-  zzmatch(ASIG); zzsubroot(_root, &_sibling, &_tail); zzCONSUME;
   {
     zzBLOCK(zztasp2);
     zzMake0;
     {
-    if ( (LA(1)==PLACE) ) {
-      place(zzSTR); zzlink(_root, &_sibling, &_tail);
+    if ( (LA(1)==ASIG) ) {
+      {
+        zzBLOCK(zztasp3);
+        zzMake0;
+        {
+        zzmatch(ASIG); zzsubroot(_root, &_sibling, &_tail); zzCONSUME;
+        {
+          zzBLOCK(zztasp4);
+          zzMake0;
+          {
+          if ( (LA(1)==PLACE) ) {
+            place(zzSTR); zzlink(_root, &_sibling, &_tail);
+          }
+          else {
+            if ( (setwd1[LA(1)]&0x20) ) {
+              pp(zzSTR); zzlink(_root, &_sibling, &_tail);
+            }
+            else {zzFAIL(1,zzerr1,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+          }
+          zzEXIT(zztasp4);
+          }
+        }
+        zzEXIT(zztasp3);
+        }
+      }
     }
     else {
-      if ( (setwd1[LA(1)]&0x20) ) {
-        pp(zzSTR); zzlink(_root, &_sibling, &_tail);
+      if ( (setwd1[LA(1)]&0x40) ) {
       }
-      else {zzFAIL(1,zzerr1,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+      else {zzFAIL(1,zzerr2,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
     }
     zzEXIT(zztasp2);
     }
@@ -340,7 +490,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd1, 0x40);
+  zzresynch(setwd1, 0x80);
   }
 }
 
@@ -365,7 +515,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd1, 0x80);
+  zzresynch(setwd2, 0x1);
   }
 }
 
@@ -385,14 +535,14 @@ AST **_root;
     zzBLOCK(zztasp2);
     zzMake0;
     {
-    if ( (setwd2[LA(1)]&0x1) ) {
+    if ( (setwd2[LA(1)]&0x2) ) {
       comp(zzSTR); zzlink(_root, &_sibling, &_tail);
     }
     else {
       if ( (LA(1)==ID) ) {
         zzmatch(ID); zzsubchild(_root, &_sibling, &_tail); zzCONSUME;
       }
-      else {zzFAIL(1,zzerr2,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+      else {zzFAIL(1,zzerr3,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
     }
     zzEXIT(zztasp2);
     }
@@ -401,7 +551,7 @@ AST **_root;
     zzBLOCK(zztasp2);
     zzMake0;
     {
-    if ( (setwd2[LA(1)]&0x2) ) {
+    if ( (setwd2[LA(1)]&0x4) ) {
       {
         zzBLOCK(zztasp3);
         zzMake0;
@@ -413,7 +563,7 @@ AST **_root;
           if ( (LA(1)==POP) ) {
             zzmatch(POP); zzsubroot(_root, &_sibling, &_tail); zzCONSUME;
           }
-          else {zzFAIL(1,zzerr3,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+          else {zzFAIL(1,zzerr4,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
         }
         zzEXIT(zztasp3);
         }
@@ -421,9 +571,9 @@ AST **_root;
       pp(zzSTR); zzlink(_root, &_sibling, &_tail);
     }
     else {
-      if ( (setwd2[LA(1)]&0x4) ) {
+      if ( (setwd2[LA(1)]&0x8) ) {
       }
-      else {zzFAIL(1,zzerr4,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+      else {zzFAIL(1,zzerr5,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
     }
     zzEXIT(zztasp2);
     }
@@ -433,7 +583,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd2, 0x8);
+  zzresynch(setwd2, 0x10);
   }
 }
 
@@ -458,7 +608,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd2, 0x10);
+  zzresynch(setwd2, 0x20);
   }
 }
 
@@ -482,10 +632,10 @@ AST **_root;
       fits(zzSTR); zzlink(_root, &_sibling, &_tail);
     }
     else {
-      if ( (setwd2[LA(1)]&0x20) ) {
+      if ( (setwd2[LA(1)]&0x40) ) {
         comparacio(zzSTR); zzlink(_root, &_sibling, &_tail);
       }
-      else {zzFAIL(1,zzerr5,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+      else {zzFAIL(1,zzerr6,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
     }
     zzEXIT(zztasp2);
     }
@@ -501,7 +651,7 @@ AST **_root;
     else {
       if ( (LA(1)==RP) ) {
       }
-      else {zzFAIL(1,zzerr6,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+      else {zzFAIL(1,zzerr7,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
     }
     zzEXIT(zztasp2);
     }
@@ -511,7 +661,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd2, 0x40);
+  zzresynch(setwd2, 0x80);
   }
 }
 
@@ -539,7 +689,7 @@ AST **_root;
       if ( (LA(1)==GT) ) {
         zzmatch(GT); zzsubroot(_root, &_sibling, &_tail); zzCONSUME;
       }
-      else {zzFAIL(1,zzerr7,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+      else {zzFAIL(1,zzerr8,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
     }
     zzEXIT(zztasp2);
     }
@@ -550,7 +700,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd2, 0x80);
+  zzresynch(setwd3, 0x1);
   }
 }
 
@@ -573,14 +723,14 @@ AST **_root;
     if ( (LA(1)==NUM) ) {
       zzmatch(NUM); zzsubchild(_root, &_sibling, &_tail); zzCONSUME;
     }
-    else {zzFAIL(1,zzerr8,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+    else {zzFAIL(1,zzerr9,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
   }
   zzEXIT(zztasp1);
   return;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd3, 0x1);
+  zzresynch(setwd3, 0x2);
   }
 }
 
@@ -606,7 +756,7 @@ AST **_root;
     else {
       if ( (LA(1)==NUM) ) {
       }
-      else {zzFAIL(1,zzerr9,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+      else {zzFAIL(1,zzerr10,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
     }
     zzEXIT(zztasp2);
     }
@@ -622,9 +772,9 @@ AST **_root;
       zzmatch(RP);  zzCONSUME;
     }
     else {
-      if ( (setwd3[LA(1)]&0x2) ) {
+      if ( (setwd3[LA(1)]&0x4) ) {
       }
-      else {zzFAIL(1,zzerr10,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+      else {zzFAIL(1,zzerr11,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
     }
     zzEXIT(zztasp2);
     }
@@ -635,7 +785,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd3, 0x4);
+  zzresynch(setwd3, 0x8);
   }
 }
 
@@ -660,7 +810,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd3, 0x8);
+  zzresynch(setwd3, 0x10);
   }
 }
 
@@ -689,7 +839,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd3, 0x10);
+  zzresynch(setwd3, 0x20);
   }
 }
 
@@ -722,7 +872,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd3, 0x20);
+  zzresynch(setwd3, 0x40);
   }
 }
 
@@ -747,7 +897,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd3, 0x40);
+  zzresynch(setwd3, 0x80);
   }
 }
 
@@ -778,7 +928,7 @@ AST **_root;
         if ( (LA(1)==SOUTH) ) {
           zzmatch(SOUTH); zzsubchild(_root, &_sibling, &_tail); zzCONSUME;
         }
-        else {zzFAIL(1,zzerr11,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+        else {zzFAIL(1,zzerr12,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
       }
     }
   }
@@ -787,7 +937,7 @@ AST **_root;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd3, 0x80);
+  zzresynch(setwd4, 0x1);
   }
 }
 
@@ -810,13 +960,13 @@ AST **_root;
     if ( (LA(1)==GT) ) {
       zzmatch(GT); zzsubroot(_root, &_sibling, &_tail); zzCONSUME;
     }
-    else {zzFAIL(1,zzerr12,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
+    else {zzFAIL(1,zzerr13,&zzMissSet,&zzMissText,&zzBadTok,&zzBadText,&zzErrk); goto fail;}
   }
   zzEXIT(zztasp1);
   return;
 fail:
   zzEXIT(zztasp1);
   zzsyn(zzMissText, zzBadTok, (ANTLRChar *)"", zzMissSet, zzMissTok, zzErrk, zzBadText);
-  zzresynch(setwd4, 0x1);
+  zzresynch(setwd4, 0x2);
   }
 }

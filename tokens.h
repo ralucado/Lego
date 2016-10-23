@@ -33,8 +33,8 @@
 #define LT 23
 #define AND 24
 #define ASIG 25
-#define ID 26
-#define END 27
+#define END 26
+#define ID 27
 #define SPACE 28
 
 #ifdef __USE_PROTOS
@@ -147,8 +147,8 @@ extern void reop();
 
 #endif
 extern SetWordType zzerr1[];
-extern SetWordType setwd1[];
 extern SetWordType zzerr2[];
+extern SetWordType setwd1[];
 extern SetWordType zzerr3[];
 extern SetWordType zzerr4[];
 extern SetWordType zzerr5[];
@@ -161,4 +161,5 @@ extern SetWordType zzerr10[];
 extern SetWordType zzerr11[];
 extern SetWordType zzerr12[];
 extern SetWordType setwd3[];
+extern SetWordType zzerr13[];
 extern SetWordType setwd4[];

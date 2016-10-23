@@ -184,14 +184,14 @@ AND
 		NLA = ASIG;
 	>>
 
-[a-zA-Z][a-zA-Z0-9]+
-	<<
-		NLA = ID;
-	>>
-
 ENDEF
 	<<
 		NLA = END;
+	>>
+
+[a-zA-Z][a-zA-Z0-9]+
+	<<
+		NLA = ID;
 	>>
 
 [reop\ \n\b]
