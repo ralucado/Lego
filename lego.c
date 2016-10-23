@@ -216,8 +216,50 @@ bool evaluaCond(AST* a){
   }
 }
 
+void placeBlock(string nom, int h, int w, int x, int y){
+  tblock bloc;
+  bloc.x = x; bloc.y = y; bloc.h = h; bloc.w = w;
+  //cout << "guarda" << endl;
+  bool noBloc = true;
+  while(noBloc && y<bloc.y+w){
+    if(g.height[x][y] > 0) noBloc = false;
+    else{
+      ++x;
+      if(x%(bloc.x+h) == 0){
+        x = bloc.x;
+        ++y;
+      }
+    }
+  }
+  if(noBloc){
+    g.blocks.insert(pair<string,tblock>(nom,bloc));
+    for (int i = x; i < x+h; ++i){
+      for (int j = y; j < y+w; ++j){
+        ++g.height[i][j];
+      }
+    }
+  }
+  else{
+    
+    }
+}
+
 void asignacio(AST* a){
   cout << "el token asig es de " << a->kind << endl;
+  string nom = child(a,0)->kind;
+  if(child(a,1)->kind == "PLACE"){
+    AST *tamany = child( child(a,1) ,0);
+    AST *lloc = child( child(a,1) ,1);
+    placeBlock(nom, atoi(child(tamany, 0)->kind.c_str()), atoi(child(tamany,1)->kind.c_str()), atoi(child(lloc,0)->kind.c_str()), atoi(child(lloc,1)->kind.c_str()));
+  }
+  else if(child(a,1)->kind == "PUSH"){
+    
+    }
+  else{//POP
+    
+    }
+  
+
 }
 
 void move(AST* a){
@@ -249,7 +291,7 @@ void execFunc(AST* a){
   it = functions.find(a->kind);
   if(it != functions.end()) doOperations(functions[a->kind]);
   else{
-    cerr << "THE FUNCTION " << a->kind << " IS NOT DEFINED" << endl;
+    cerr << "LA FUNCIO " << a->kind << " NO ESTA DEFINIDA" << endl;
     exit(1);
   }
 }
