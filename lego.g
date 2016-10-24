@@ -109,7 +109,7 @@ typedef struct {
     int n, m;
     vector< vector <int> > height;
     map <string, tblock> blocks;
-    map <string, vector<tblock> > apilats;
+    map <string, vector<string> > apilats;
 } Graella;
 
 //predeclaracio de coses
@@ -140,10 +140,29 @@ void defineFunctions(AST *a){
         actual = child(a,i);
     }
     map<string,AST*>::iterator it;
-    for (it = functions.begin(); it != functions.end(); ++it){
+    /*for (it = functions.begin(); it != functions.end(); ++it){
         cout << it->first << "->" << it->second->kind << endl;
-    }
+    }*/
 
+}
+int fitsX, fitsY;
+bool Bfits(int tamX, int tamY, int x, int y, int h, int w, int nivell){
+    bool found = false;
+    int i = y, j=x;
+    while (not found && i < y+h){
+        found = flat(i,j,tamY,tamX,nivell);
+        if(found){
+            fitsX = j;
+            fitsY = i;
+            return true;
+        }
+        ++j;
+        if(j % (x+w) == 0){
+            j = x;
+            ++i;
+        }
+    }
+    return false;
 }
 
 bool fits(AST* a){
@@ -157,18 +176,7 @@ bool fits(AST* a){
     map<string,tblock>::iterator it;
     it = g.blocks.find(nom);
     tblock bloc = it->second;
-    bool found = false;
-    int i = bloc.y, j=bloc.x;
-    while (not found && i < bloc.y+bloc.h){
-        found = flat(i,j,tamY,tamX,nivell);
-        if(found) return true;
-        ++j;
-        if(j % (bloc.x+bloc.w) == 0){
-            j = bloc.x;
-            ++i;
-        }
-    }
-    return false;
+    return Bfits(tamX, tamY, bloc.x, bloc.y, bloc.h, bloc.w, nivell);
 }
 
 int ievaluaCond(AST* a){
@@ -241,12 +249,10 @@ int heightByName(string nom){
 }
 
 void placeBlock(string nom, int h, int w, int x, int y){
-    //cout << "guarra" << endl;
     if(flat(x,y,h,w,0)){
         tblock bloc;
         bloc.x = x; bloc.y = y; bloc.h = h; bloc.w = w;
         g.blocks.insert(pair<string,tblock>(nom,bloc));
-        //cout << "aqui ve el sida " << endl;
         for (int i = bloc.y; i < bloc.y+h; ++i){
             for (int j = bloc.x; j < bloc.x+w; ++j){
                 ++g.height[i][j];
@@ -258,8 +264,62 @@ void placeBlock(string nom, int h, int w, int x, int y){
     }
 }
 
+int firstIncLev(tblock bloc, string name){
+    int nivell = 0;
+    while(nivell < heightByName(name)){
+        for(int i = bloc.y; i < bloc.y+bloc.h; ++i){
+            for(int j = bloc.x; j < bloc.x+bloc.w; ++j){
+                int acth = g.height[i][j];
+                if(acth != nivell) return nivell;
+            }
+        }
+        ++nivell;
+    }
+}
+
+void push(AST* a){
+    int h, w;
+    bool id = false;
+    if (child(a,0)->kind == "list"){
+        w = atoi(child(child(a,0),0)->kind.c_str());
+        h = atoi(child(child(a,0),1)->kind.c_str());
+
+    }
+
+    else{
+        id = true;
+        map<string,tblock>::iterator it;
+        it = g.blocks.find(child(a,0)->kind);
+        tblock bloc = it->second;
+        w = bloc.w;
+        h = bloc.h;
+    }
+
+    string destName = child(a,1)->kind;
+    if (destName == "list"){
+        cerr << "EL SEGON OPERAND NO POT SER UN BLOC SENSE NOM" << endl;
+        return;
+    }
+    map<string,tblock>::iterator it;
+    it = g.blocks.find(destName);
+    tblock bloc = it->second;
+    int destx = bloc.x; int desty = bloc.y; int desth = bloc.h; int destw = bloc.w;
+    bool placed = false;
+    int destniv = firstIncLev(bloc, destName);
+    while(not placed && destniv <= desth){
+        if(Bfits(w,h,destx,desty,desth,destw,destniv)){
+            placeBlock("",h,w,fitsX,fitsY);
+            placed = true;
+        }
+    }
+}
+
+void pop(AST* a){
+
+}
+
 void asignacio(AST* a){
-    cout << "el token asig es de " << a->kind << endl;
+     //cout<< "el token asig es de " << a->kind << endl;
     string nom = child(a,0)->kind;
     if(child(a,1)->kind == "PLACE"){
         AST *tamany = child( child(a,1) ,0);
@@ -267,20 +327,18 @@ void asignacio(AST* a){
         placeBlock(nom, atoi(child(tamany, 0)->kind.c_str()), atoi(child(tamany,1)->kind.c_str()), atoi(child(lloc,0)->kind.c_str()), atoi(child(lloc,1)->kind.c_str()));
     }
     else if(child(a,1)->kind == "PUSH"){
-       // cout << "hola que tal " << endl;
-
-        push();
-
+       // //cout << "hola que tal " << endl;
+        push(child(a,1));
     }
     else{//POP
-
+        pop (child(a,1));
     }
 
 
 }
 
 void move(AST* a){
-    cout << "el token move es de " << a->kind << endl;
+    //cout << "el token move es de " << a->kind << endl;
     string nom = child(a, 0)->kind;
     string dir  = child(a, 1)->kind;
     int distancia = atoi(child(a, 2)->kind.c_str());
@@ -314,20 +372,20 @@ void move(AST* a){
 
 void bucle(AST* a){
     //contCond = 0;
-    cout << "el token bakel es de " << a->kind << endl;
+    //cout << "el token bakel es de " << a->kind << endl;
     while (evaluaCond(child(a,0))){
         doOperations(child(a,1));
     }
 }
 
 int retHeight(AST* a){
-    cout << "volem saber la alçada de " << child(a,0)->kind <</* " i count es "<< count << */endl;
+    //cout << "volem saber la alçada de " << child(a,0)->kind <</* " i count es "<< count << */endl;
     string nom = child(a, 0)->kind;
     return heightByName(nom);
 }
 
 void execFunc(AST* a){
-    cout << "el token execfunc es de " << a->kind << endl;
+    //cout << "el token execfunc es de " << a->kind << endl;
     map <string, AST*>::iterator it;
     it = functions.find(a->kind);
     if(it != functions.end()) doOperations(functions[a->kind]);
@@ -351,7 +409,7 @@ AST* actual = child(a,i);
         if (actual->kind == "=") asignacio(actual);
         else if (actual->kind == "MOVE") move(actual);
         else if (actual->kind == "WHILE") bucle(actual);
-        else if (actual->kind == "HEIGHT") cout << "ret height es " << retHeight(actual) << endl;
+        else if (actual->kind == "HEIGHT") cout << retHeight(actual) << endl;
         else execFunc(actual);
         ++i;
         actual = child(a,i);
@@ -419,7 +477,7 @@ int main() {
 #token END "ENDEF"
 #token ID "[a-zA-Z][a-zA-Z0-9]+"
 //...
-#token SPACE "[reop\ \n\b]" << zzskip();>>
+#token SPACE "[\ \n\t]" << zzskip();>>
 
 lego: grid ops defs <<#0=createASTlist(_sibling);>>;
 //...

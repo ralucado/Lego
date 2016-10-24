@@ -194,7 +194,7 @@ ENDEF
 		NLA = ID;
 	>>
 
-[reop\ \n\b]
+[\ \n\t]
 	<<
 		NLA = SPACE;
     zzskip();  
