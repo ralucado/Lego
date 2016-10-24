@@ -109,11 +109,14 @@ typedef struct {
     int n, m;
     vector< vector <int> > height;
     map <string, tblock> blocks;
+    map <string, vector<tblock> > apilats;
 } Graella;
 
 //predeclaracio de coses
 void doOperations(AST *a);
 int retHeight(AST* a);
+int heightByName(string nom);
+bool flat(int x, int y, int h, int w, int ground);
 
 Graella g;
 
@@ -143,13 +146,29 @@ void defineFunctions(AST *a){
 
 }
 
-
-int contCond = 0;
 bool fits(AST* a){
-    ++contCond;
-    bool b = contCond != 2;
-    cout << "Does " << a->kind << "\'s son fit? " << b << endl;
-    return b;
+    //cout << "maria fits" << endl;
+    string nom = child(a,0)->kind;
+    //cout << nom << endl;
+    int tamX = atoi(child(child(a,1), 0)->kind.c_str());
+    int tamY = atoi(child(child(a,1), 1)->kind.c_str());
+    int nivell = atoi(child(a, 2)->kind.c_str());
+    //cout << " alpaca!" << endl;
+    map<string,tblock>::iterator it;
+    it = g.blocks.find(nom);
+    tblock bloc = it->second;
+    bool found = false;
+    int i = bloc.y, j=bloc.x;
+    while (not found && i < bloc.y+bloc.h){
+        found = flat(i,j,tamY,tamX,nivell);
+        if(found) return true;
+        ++j;
+        if(j % (bloc.x+bloc.w) == 0){
+            j = bloc.x;
+            ++i;
+        }
+    }
+    return false;
 }
 
 int ievaluaCond(AST* a){
@@ -167,11 +186,11 @@ int ievaluaCond(AST* a){
 }
 
 bool evaluaCond(AST* a){
-    cout << "avere com faig aixo sense morirme" << endl;
+    //cout << "avere com faig aixo sense morirme" << endl;
     if(a->kind == "AND"){
         return bool(ievaluaCond(child(a,0))) && bool(ievaluaCond(child(a,1)));
     }
-    else if (a->kind == "FITS") return fits(child(a,0));
+    else if (a->kind == "FITS") return fits(a);
     else if (a->kind == "<"){
         return ievaluaCond(child(a,0)) < ievaluaCond(child(a,1));
     }
@@ -180,14 +199,16 @@ bool evaluaCond(AST* a){
     }
     else{
         cerr << "LA CONDICIO HA DE CONTENIR ALMENYS UN OPERADOR BINARI" << endl;
-        exit(1);
+       // exit(1);
     }
 }
 
-bool flat(int x, int y, int h, int w){
-    int firstHeight = g.height[x][y];
-    for (int i = x; i <x+w; ++i){
-        for (int j = y; j < y+h; ++j){
+bool flat(int x, int y, int h, int w, int ground){
+    int firstHeight = ground;
+    if(x >= g.n or y>=g.m or x<1 or y<1 or x+w >= g.n or y+h >= g.m) return false;
+    if (ground == -1) firstHeight = g.height[x][y];
+    for (int i = y; i < y+h; ++i){
+        for (int j = x; j < x+w; ++j){
             if(g.height[i][j] != firstHeight) return false;
         }
     }
@@ -195,23 +216,44 @@ bool flat(int x, int y, int h, int w){
 }
 
 void level(int desnivell, int x, int y, int h, int w){
-    for (int i = x; i <x+w; ++i){
-        for (int j = y; j < y+h; ++j){
+    for (int i = y; i < y+h; ++i){
+        for (int j = x; j < x+w; ++j){
             g.height[i][j] += desnivell;
         }
     }
 }
 
+int heightByName(string nom){
+    map<string,tblock>::iterator it;
+    it = g.blocks.find(nom);
+    tblock bloc = it->second;
+    int maxH = g.height[bloc.x][bloc.y];
+    //cout << "maxH de " << nom << " es " << maxH << endl;
+    for (int i = bloc.y; i < bloc.y+ bloc.h; ++i){
+        for (int j = bloc.x; j < bloc.x+ bloc.w; ++j){
+            if (g.height[i][j] > maxH ){
+                maxH = g.height[i][j];
+                //cout << "nou  maxH = " << maxH << endl;
+            }
+        }
+    }
+    return maxH;
+}
+
 void placeBlock(string nom, int h, int w, int x, int y){
     //cout << "guarra" << endl;
-    if(flat(x,y,h,w)){
+    if(flat(x,y,h,w,0)){
         tblock bloc;
         bloc.x = x; bloc.y = y; bloc.h = h; bloc.w = w;
         g.blocks.insert(pair<string,tblock>(nom,bloc));
-        for (int i = bloc.x; i < bloc.x+w; ++i){
-            for (int j = bloc.y; j < bloc.y+h; ++j){
+        //cout << "aqui ve el sida " << endl;
+        for (int i = bloc.y; i < bloc.y+h; ++i){
+            for (int j = bloc.x; j < bloc.x+w; ++j){
                 ++g.height[i][j];
+                //cout << g.height[i][j] << " " ;
+
             }
+            //cout << endl;
         }
     }
 }
@@ -225,6 +267,9 @@ void asignacio(AST* a){
         placeBlock(nom, atoi(child(tamany, 0)->kind.c_str()), atoi(child(tamany,1)->kind.c_str()), atoi(child(lloc,0)->kind.c_str()), atoi(child(lloc,1)->kind.c_str()));
     }
     else if(child(a,1)->kind == "PUSH"){
+       // cout << "hola que tal " << endl;
+
+        push();
 
     }
     else{//POP
@@ -259,9 +304,11 @@ void move(AST* a){
         cerr << "EL BLOC ESPECIFICAT NO EXISTEIX" << endl;
         //exit(1);
     }
-    else if(flat(bloc.x+dx, bloc.y+dy, bloc.h, bloc.w)){
-        level(-1,bloc.x,bloc.y,bloc.h,bloc.w);
-        level(+1,bloc.x+dx,bloc.y+dy,bloc.h,bloc.w);
+    else if(flat(bloc.x+dx, bloc.y+dy, bloc.h, bloc.w,0)){
+        level(-heightByName(nom),bloc.x,bloc.y,bloc.h,bloc.w);
+        level(heightByName(nom),bloc.x+dx,bloc.y+dy,bloc.h,bloc.w);
+        it->second.x = bloc.x+dx;
+        it->second.y = bloc.y+dy;
     }
 }
 
@@ -273,15 +320,10 @@ void bucle(AST* a){
     }
 }
 
-int h1 = 1, h2 = 2;
-bool count = false;
 int retHeight(AST* a){
     cout << "volem saber la alçada de " << child(a,0)->kind <</* " i count es "<< count << */endl;
-/*
-    count = !count;
-    if (count) return h1;
-    return h2;*/
-    return 0;
+    string nom = child(a, 0)->kind;
+    return heightByName(nom);
 }
 
 void execFunc(AST* a){
@@ -309,7 +351,7 @@ AST* actual = child(a,i);
         if (actual->kind == "=") asignacio(actual);
         else if (actual->kind == "MOVE") move(actual);
         else if (actual->kind == "WHILE") bucle(actual);
-        else if (actual->kind == "HEIGHT") cout << retHeight(actual) << endl;
+        else if (actual->kind == "HEIGHT") cout << "ret height es " << retHeight(actual) << endl;
         else execFunc(actual);
         ++i;
         actual = child(a,i);
