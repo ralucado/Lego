@@ -184,31 +184,35 @@ bool evaluaCond(AST* a){
     }
 }
 
-void placeBlock(string nom, int h, int w, int x, int y){
-    tblock bloc;
-    bloc.x = x; bloc.y = y; bloc.h = h; bloc.w = w;
-    //cout << "guarda" << endl;
-    bool noBloc = true;
-    while(noBloc && y<bloc.y+w){
-        if(g.height[x][y] > 0) noBloc = false;
-        else{
-            ++x;
-            if(x%(bloc.x+h) == 0){
-                x = bloc.x;
-                ++y;
-            }
+bool flat(int x, int y, int h, int w){
+    int firstHeight = g.height[x][y];
+    for (int i = x; i <x+w; ++i){
+        for (int j = y; j < y+h; ++j){
+            if(g.height[i][j] != firstHeight) return false;
         }
     }
-    if(noBloc){
+    return true;
+}
+
+void level(int desnivell, int x, int y, int h, int w){
+    for (int i = x; i <x+w; ++i){
+        for (int j = y; j < y+h; ++j){
+            g.height[i][j] += desnivell;
+        }
+    }
+}
+
+void placeBlock(string nom, int h, int w, int x, int y){
+    //cout << "guarra" << endl;
+    if(flat(x,y,h,w)){
+        tblock bloc;
+        bloc.x = x; bloc.y = y; bloc.h = h; bloc.w = w;
         g.blocks.insert(pair<string,tblock>(nom,bloc));
-        for (int i = x; i < x+h; ++i){
-            for (int j = y; j < y+w; ++j){
+        for (int i = bloc.x; i < bloc.x+w; ++i){
+            for (int j = bloc.y; j < bloc.y+h; ++j){
                 ++g.height[i][j];
             }
         }
-    }
-    else{
-
     }
 }
 
@@ -232,6 +236,33 @@ void asignacio(AST* a){
 
 void move(AST* a){
     cout << "el token move es de " << a->kind << endl;
+    string nom = child(a, 0)->kind;
+    string dir  = child(a, 1)->kind;
+    int distancia = atoi(child(a, 2)->kind.c_str());
+    int dx,dy;
+    if(dir == "NORTH"){
+        dx = 0; dy = -distancia;
+    }
+    else if (dir == "SOUTH"){
+        dx = 0; dy = distancia;
+    }
+    else if(dir == "EAST"){
+        dx = distancia; dy = 0;
+    }
+    else{
+        dx = -distancia; dy = 0;
+    }
+    map<string,tblock>::iterator it;
+    it = g.blocks.find(nom);
+    tblock bloc = it->second;
+    if (it == g.blocks.end()){
+        cerr << "EL BLOC ESPECIFICAT NO EXISTEIX" << endl;
+        //exit(1);
+    }
+    else if(flat(bloc.x+dx, bloc.y+dy, bloc.h, bloc.w)){
+        level(-1,bloc.x,bloc.y,bloc.h,bloc.w);
+        level(+1,bloc.x+dx,bloc.y+dy,bloc.h,bloc.w);
+    }
 }
 
 void bucle(AST* a){
